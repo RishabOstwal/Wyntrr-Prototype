@@ -237,6 +237,11 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           audio_only: mode === 'audio',
+          conversational_context: [
+            `At the start of this call, the user's camera is ${mode === 'audio' ? 'OFF' : 'ON'}.`,
+            'The app will send an update whenever the camera state changes; the latest update is authoritative and supersedes earlier states.',
+            'Never claim to currently see the user just because they ask. If the camera is OFF, or live visual input is unavailable, clearly say you cannot currently see them.',
+          ].join(' '),
         }),
       });
       const result = await response.json();
@@ -300,6 +305,31 @@ function App() {
     }
   };
 
+  const toggleCamera = async () => {
+    const call = dailyCallRef.current;
+    if (!call) return;
+
+    const next = !cameraOn;
+    try {
+      await call.setLocalVideo(next);
+      setCameraOn(next);
+
+      const conversation = activeConversationRef.current;
+      if (conversation?.id) {
+        call.sendAppMessage({
+          message_type: 'conversation',
+          event_type: 'conversation.append_llm_context',
+          conversation_id: conversation.id,
+          properties: {
+            context: `Camera state update from the app: the user's camera is now ${next ? 'ON' : 'OFF'}. This is the latest authoritative state and supersedes earlier camera states. If OFF, say you cannot currently see the user. If ON, only say you can see them when live visual input is actually available.`,
+          },
+        }, '*');
+      }
+    } catch (cameraError) {
+      setCallError(cameraError?.message || 'Could not update the camera.');
+    }
+  };
+
   return (
     <div className={`chat-shell ${active ? 'in-call' : ''}`}>
       <main className="main-panel">
@@ -330,7 +360,7 @@ function App() {
                 {active.mode === 'audio' && callConnected && <div className="audio-presence"><div className="audio-orb"><span /><span /><span /><span /><span /></div><strong>Wyntrr</strong><small>Audio call</small></div>}
                 {participants.filter((participant) => participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} local />)}
                 {callConnected && <div className="call-controls">
-                  <button aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'} onClick={async () => { const next = !cameraOn; await dailyCallRef.current?.setLocalVideo(next); setCameraOn(next); }}><Camera size={19} />{cameraOn ? 'Camera' : 'Camera off'}</button>
+                  <button aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'} onClick={toggleCamera}><Camera size={19} />{cameraOn ? 'Camera' : 'Camera off'}</button>
                   <button aria-label={micOn ? 'Mute microphone' : 'Unmute microphone'} onClick={async () => { const next = !micOn; await dailyCallRef.current?.setLocalAudio(next); setMicOn(next); }}>{micOn ? <Mic size={19} /> : <MicOff size={19} />}{micOn ? 'Mic' : 'Muted'}</button>
                   <button className={`caption-toggle ${captionsEnabled ? 'active' : ''}`} aria-label={`Turn captions ${captionsEnabled ? 'off' : 'on'}`} aria-pressed={captionsEnabled} onClick={() => { if (captionsEnabled) setCaption(null); setCaptionsEnabled(!captionsEnabled); }}><span aria-hidden="true">CC</span>Captions</button>
                   <button className="leave-call" aria-label="Leave call" onClick={() => endConversation()} disabled={ending}><PhoneOff size={19} />Leave</button>
