@@ -291,7 +291,7 @@ function App() {
             <div ref={callFrameRef} className="call-frame">
               <div ref={dailyContainerRef} className="custom-call-stage">
                 {participants.filter((participant) => !participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} />)}
-                {!callConnected && <div className="joining-state"><LoaderCircle size={22} className="spin" /><span>{callError ? 'Having trouble connecting' : 'Connecting to your Tavus call...'}</span></div>}
+                {!callConnected && <div className="joining-state"><LoaderCircle size={22} className="spin" /><span>{callError ? 'Having trouble connecting' : 'Connecting...'}</span></div>}
                 {active.mode === 'audio' && callConnected && <div className="audio-presence"><div className="audio-orb"><span /><span /><span /><span /><span /></div><strong>PAL</strong><small>Audio call</small></div>}
                 {participants.filter((participant) => participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} local />)}
                 {callConnected && <div className="call-controls">
