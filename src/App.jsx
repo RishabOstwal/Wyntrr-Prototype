@@ -4,6 +4,73 @@ import DailyIframe from '@daily-co/daily-js';
 
 const loadDailyClient = () => Promise.resolve(DailyIframe);
 
+function createMutedSpeechDetector(audioTrack, onSpeechDetected) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!audioTrack || !AudioContextClass) return null;
+
+  let monitorTrack;
+  let audioContext;
+  let source;
+  let analyser;
+  let resumePromise;
+  let animationFrame;
+  let stopped = false;
+
+  try {
+    monitorTrack = audioTrack.clone();
+    audioContext = new AudioContextClass();
+    source = audioContext.createMediaStreamSource(new MediaStream([monitorTrack]));
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);
+    resumePromise = audioContext.resume().then(() => true, () => false);
+  } catch {
+    monitorTrack?.stop();
+    audioContext?.close().catch(() => {});
+    return null;
+  }
+
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    window.cancelAnimationFrame(animationFrame);
+    source.disconnect();
+    monitorTrack.stop();
+    audioContext.close().catch(() => {});
+  };
+
+  const start = async () => {
+    try {
+      if (!await resumePromise) {
+        stop();
+        return;
+      }
+    } catch {
+      stop();
+      return;
+    }
+
+    const samples = new Float32Array(analyser.fftSize);
+    let voiceFrames = 0;
+    const sampleAudio = () => {
+      if (stopped) return;
+      analyser.getFloatTimeDomainData(samples);
+      const rms = Math.sqrt(samples.reduce((sum, sample) => sum + sample * sample, 0) / samples.length);
+      voiceFrames = rms > 0.035 ? voiceFrames + 1 : 0;
+      if (voiceFrames >= 7) {
+        stop();
+        onSpeechDetected();
+        return;
+      }
+      animationFrame = window.requestAnimationFrame(sampleAudio);
+    };
+
+    animationFrame = window.requestAnimationFrame(sampleAudio);
+  };
+
+  return { start, stop };
+}
+
 const readStored = (key, fallback) => {
   try {
     const stored = localStorage.getItem(key);
@@ -66,6 +133,7 @@ function App() {
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
   const [caption, setCaption] = useState(null);
   const [callError, setCallError] = useState('');
+  const mutedSpeechDetectorRef = useRef(null);
   useEffect(() => {
     fetch('/api/health')
       .then((response) => response.json())
@@ -208,6 +276,8 @@ function App() {
     connectToCall();
     return () => {
       disposed = true;
+      mutedSpeechDetectorRef.current?.stop();
+      mutedSpeechDetectorRef.current = null;
       window.clearTimeout(joinTimeout);
       if (dailyCallRef.current === call) dailyCallRef.current = null;
       if (call) {
@@ -330,6 +400,49 @@ function App() {
     }
   };
 
+  const toggleMicrophone = async () => {
+    const call = dailyCallRef.current;
+    if (!call) return;
+
+    const next = !micOn;
+    const localAudioTrack = call.participants()?.local?.tracks?.audio?.persistentTrack;
+    const detector = next ? null : createMutedSpeechDetector(localAudioTrack, () => {
+      const conversation = activeConversationRef.current;
+      if (!conversation?.id) return;
+      call.sendAppMessage({
+        message_type: 'conversation',
+        event_type: 'conversation.echo',
+        conversation_id: conversation.id,
+        properties: {
+          modality: 'text',
+          text: 'Are you saying something?',
+          done: true,
+        },
+      }, '*');
+    });
+
+    try {
+      await call.setLocalAudio(next);
+      setMicOn(next);
+      if (next) {
+        mutedSpeechDetectorRef.current?.stop();
+        mutedSpeechDetectorRef.current = null;
+      } else if (detector) {
+        mutedSpeechDetectorRef.current?.stop();
+        mutedSpeechDetectorRef.current = detector;
+        detector.start();
+      }
+    } catch (micError) {
+      detector?.stop();
+      setCallError(micError?.message || 'Could not update the microphone.');
+      return;
+    }
+
+    if (!next && !detector) {
+      setCallError('Muted speech detection is unavailable on this device. Your microphone remains muted.');
+    }
+  };
+
   return (
     <div className={`chat-shell ${active ? 'in-call' : ''}`}>
       <main className="main-panel">
@@ -361,7 +474,7 @@ function App() {
                 {participants.filter((participant) => participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} local />)}
                 {callConnected && <div className="call-controls">
                   <button aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'} onClick={toggleCamera}><Camera size={19} />{cameraOn ? 'Camera' : 'Camera off'}</button>
-                  <button aria-label={micOn ? 'Mute microphone' : 'Unmute microphone'} onClick={async () => { const next = !micOn; await dailyCallRef.current?.setLocalAudio(next); setMicOn(next); }}>{micOn ? <Mic size={19} /> : <MicOff size={19} />}{micOn ? 'Mic' : 'Muted'}</button>
+                  <button aria-label={micOn ? 'Mute microphone' : 'Unmute microphone'} title={micOn ? 'Mute microphone' : 'Muted. Speech is detected on this device; audio is not sent while muted.'} onClick={toggleMicrophone}>{micOn ? <Mic size={19} /> : <MicOff size={19} />}{micOn ? 'Mic' : 'Muted'}</button>
                   <button className={`caption-toggle ${captionsEnabled ? 'active' : ''}`} aria-label={`Turn captions ${captionsEnabled ? 'off' : 'on'}`} aria-pressed={captionsEnabled} onClick={() => { if (captionsEnabled) setCaption(null); setCaptionsEnabled(!captionsEnabled); }}><span aria-hidden="true">CC</span>Captions</button>
                   <button className="leave-call" aria-label="Leave call" onClick={() => endConversation()} disabled={ending}><PhoneOff size={19} />Leave</button>
                 </div>}
