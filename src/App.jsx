@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, LoaderCircle, Maximize2, Minimize2, Mic, MicOff, PhoneOff, Video, X } from 'lucide-react';
+import { Camera, CameraOff, LoaderCircle, Maximize2, Minimize2, Mic, MicOff, PhoneOff, Video, X } from 'lucide-react';
 import DailyIframe from '@daily-co/daily-js';
 
 const loadDailyClient = () => Promise.resolve(DailyIframe);
@@ -473,7 +473,7 @@ function App() {
                 {active.mode === 'audio' && callConnected && <div className="audio-presence"><div className="audio-orb"><span /><span /><span /><span /><span /></div><strong>Wyntrr</strong><small>Audio call</small></div>}
                 {participants.filter((participant) => participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} local />)}
                 {callConnected && <div className="call-controls">
-                  <button aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'} onClick={toggleCamera}><Camera size={19} />{cameraOn ? 'Camera' : 'Camera off'}</button>
+                  <button aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'} onClick={toggleCamera}>{cameraOn ? <Camera size={19} /> : <CameraOff size={19} />}{cameraOn ? 'Camera' : 'Camera off'}</button>
                   <button aria-label={micOn ? 'Mute microphone' : 'Unmute microphone'} title={micOn ? 'Mute microphone' : 'Muted. Speech is detected on this device; audio is not sent while muted.'} onClick={toggleMicrophone}>{micOn ? <Mic size={19} /> : <MicOff size={19} />}{micOn ? 'Mic' : 'Muted'}</button>
                   <button className={`caption-toggle ${captionsEnabled ? 'active' : ''}`} aria-label={`Turn captions ${captionsEnabled ? 'off' : 'on'}`} aria-pressed={captionsEnabled} onClick={() => { if (captionsEnabled) setCaption(null); setCaptionsEnabled(!captionsEnabled); }}><span aria-hidden="true">CC</span>Captions</button>
                   <button className="leave-call" aria-label="Leave call" onClick={() => endConversation()} disabled={ending}><PhoneOff size={19} />Leave</button>
