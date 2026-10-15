@@ -1,34 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Camera, LoaderCircle, Maximize2, Minimize2, Mic, MicOff, PhoneOff, Video, X } from 'lucide-react';
+import DailyIframe from '@daily-co/daily-js';
 
-let dailyClientPromise;
-
-const loadDailyClient = () => {
-  if (window.Daily?.createCallObject) return Promise.resolve(window.Daily);
-  if (!dailyClientPromise) {
-    dailyClientPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/@daily-co/daily-js@0.92.2/dist/daily.js';
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      script.onload = () => {
-        if (window.Daily?.createCallObject) {
-          resolve(window.Daily);
-        } else {
-          dailyClientPromise = null;
-          reject(new Error('Daily loaded, but its call client was unavailable.'));
-        }
-      };
-      script.onerror = () => {
-        dailyClientPromise = null;
-        script.remove();
-        reject(new Error('Could not load the call client. Check your internet connection and try again.'));
-      };
-      document.head.append(script);
-    });
-  }
-  return dailyClientPromise;
-};
+const loadDailyClient = () => Promise.resolve(DailyIframe);
 
 const readStored = (key, fallback) => {
   try {
@@ -83,13 +57,13 @@ function App() {
   const callFrameRef = useRef(null);
   const dailyContainerRef = useRef(null);
   const dailyCallRef = useRef(null);
+  const activeConversationRef = useRef(null);
+  const endingConversationIdsRef = useRef(new Set());
   const [callConnected, setCallConnected] = useState(false);
   const [participants, setParticipants] = useState([]);
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
   const [callError, setCallError] = useState('');
-
-
   useEffect(() => {
     fetch('/api/health')
       .then((response) => response.json())
@@ -105,6 +79,23 @@ function App() {
     const syncFullscreenState = () => setIsFullscreen(document.fullscreenElement === callFrameRef.current);
     document.addEventListener('fullscreenchange', syncFullscreenState);
     return () => document.removeEventListener('fullscreenchange', syncFullscreenState);
+  }, []);
+
+  useEffect(() => {
+    const endConversationOnPageHide = () => {
+      const conversation = activeConversationRef.current;
+      if (!conversation || endingConversationIdsRef.current.has(conversation.id)) return;
+
+      endingConversationIdsRef.current.add(conversation.id);
+      const endpoint = `/api/conversations/${encodeURIComponent(conversation.id)}/end`;
+      const queued = navigator.sendBeacon?.(endpoint);
+      if (!queued) {
+        fetch(endpoint, { method: 'POST', keepalive: true }).catch(() => {});
+      }
+    };
+
+    window.addEventListener('pagehide', endConversationOnPageHide);
+    return () => window.removeEventListener('pagehide', endConversationOnPageHide);
   }, []);
 
   useEffect(() => {
@@ -145,6 +136,13 @@ function App() {
       }
     };
 
+    const onLeftMeeting = () => {
+      if (!disposed) {
+        setCallConnected(false);
+        endConversation(active);
+      }
+    };
+
     const connectToCall = async () => {
       try {
         const DailyIframe = await loadDailyClient();
@@ -154,12 +152,7 @@ function App() {
         call = DailyIframe.createCallObject({ subscribeToTracksAutomatically: true });
         dailyCallRef.current = call;
         call.on('joined-meeting', onJoinedMeeting);
-        call.on('left-meeting', () => {
-          if (!disposed) {
-            setCallConnected(false);
-            endConversation();
-          }
-        });
+        call.on('left-meeting', onLeftMeeting);
         call.on('participant-joined', syncParticipants);
         call.on('participant-updated', syncParticipants);
         call.on('participant-left', syncParticipants);
@@ -186,6 +179,7 @@ function App() {
       if (dailyCallRef.current === call) dailyCallRef.current = null;
       if (call) {
         call.off('joined-meeting', onJoinedMeeting);
+        call.off('left-meeting', onLeftMeeting);
         call.off('error', onCallJoinError);
         call.off('load-attempt-failed', onCallJoinError);
         call.off('participant-joined', syncParticipants);
@@ -222,6 +216,7 @@ function App() {
         name: result.conversation_name || (mode === 'audio' ? 'Audio call' : 'Video call'),
         mode,
       };
+      activeConversationRef.current = session;
       setActive(session);
     } catch (err) {
       if (document.fullscreenElement === callFrameRef.current) {
@@ -234,21 +229,27 @@ function App() {
   };
 
   const endConversation = async (conversation = active) => {
-    if (!conversation) return;
+    if (!conversation || typeof conversation.id !== 'string' || !conversation.id.trim()) return;
+    if (endingConversationIdsRef.current.has(conversation.id)) return;
+    endingConversationIdsRef.current.add(conversation.id);
     setEnding(true);
     setError('');
     try {
-      const response = await fetch(`/api/conversations/${encodeURIComponent(conversation.id)}/end`, { method: 'POST' });
+      const response = await fetch(`/api/conversations/${encodeURIComponent(conversation.id)}/end`, { method: 'POST', keepalive: true });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || result.message || 'Could not end this conversation.');
       if (document.fullscreenElement === callFrameRef.current) {
         await document.exitFullscreen?.().catch(() => {});
       }
-      if (active?.id === conversation.id) setActive(null);
+      if (activeConversationRef.current?.id === conversation.id) {
+        activeConversationRef.current = null;
+        setActive(null);
+      }
       setNotice('Conversation ended.');
     } catch (err) {
       setError(err.message || 'Could not end this conversation.');
     } finally {
+      endingConversationIdsRef.current.delete(conversation.id);
       setEnding(false);
     }
   };
@@ -296,22 +297,22 @@ function App() {
                 {callConnected && <div className="call-controls">
                   <button aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'} onClick={async () => { const next = !cameraOn; await dailyCallRef.current?.setLocalVideo(next); setCameraOn(next); }}><Camera size={19} />{cameraOn ? 'Camera' : 'Camera off'}</button>
                   <button aria-label={micOn ? 'Mute microphone' : 'Unmute microphone'} onClick={async () => { const next = !micOn; await dailyCallRef.current?.setLocalAudio(next); setMicOn(next); }}>{micOn ? <Mic size={19} /> : <MicOff size={19} />}{micOn ? 'Mic' : 'Muted'}</button>
-                  <button className="leave-call" aria-label="Leave call" onClick={endConversation} disabled={ending}><PhoneOff size={19} />Leave</button>
+                  <button className="leave-call" aria-label="Leave call" onClick={() => endConversation()} disabled={ending}><PhoneOff size={19} />Leave</button>
                 </div>}
               </div>
               <div className="fullscreen-controls">
                 <button onClick={toggleFullscreen}><Minimize2 size={16} />Exit fullscreen</button>
-                <button className="end-button" onClick={endConversation} disabled={ending}>{ending ? 'Ending...' : 'End call'}</button>
+                <button className="end-button" onClick={() => endConversation()} disabled={ending}>{ending ? 'Ending...' : 'End call'}</button>
               </div>
             </div>
             <div className="call-toolbar">
               <span className="call-state"><i className={callConnected ? 'online' : ''} />{callConnected ? 'Connected' : callError ? 'Connection issue' : 'Joining call...'}</span>
               <div className="toolbar-actions">
                 <button onClick={toggleFullscreen}>{isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}{isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}</button>
-                <button className="end-button" onClick={endConversation} disabled={ending}>{ending ? 'Ending...' : 'End call'}</button>
+                <button className="end-button" onClick={() => endConversation()} disabled={ending}>{ending ? 'Ending...' : 'End call'}</button>
               </div>
             </div>
-            {callError && <div className="call-error" role="alert"><span>{callError}</span><button onClick={endConversation} disabled={ending}>{ending ? 'Ending...' : 'End call'}</button></div>}
+            {callError && <div className="call-error" role="alert"><span>{callError}</span><button onClick={() => endConversation()} disabled={ending}>{ending ? 'Ending...' : 'End call'}</button></div>}
           </section>
 
         </div>}

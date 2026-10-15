@@ -133,3 +133,4 @@ body{background:#080b10}
 .privacy-note{color:#a2adbd}
 .chat-shell.in-call .main-panel{background:#080b10}
 @media(max-width:620px){.local-tile{right:12px;bottom:86px;width:32vw;height:20vh;min-height:100px}.call-controls{bottom:16px;gap:4px;padding:6px}.call-controls button{min-width:56px}}
+
