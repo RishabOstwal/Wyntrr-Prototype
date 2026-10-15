@@ -35,7 +35,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .connection i{width:7px;height:7px;background:#b3b3b3;border-radius:50%}
 .connection.ready i{background:#27a36a}
 .notice{display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(760px,calc(100% - 32px));margin:16px auto 0;padding:10px 13px;border:1px solid #d9eadf;border-radius:8px;background:#f1faf4;color:#326449;font-size:13px}
-.notice button{border:0;background:transparent;padding:4px}
+.notice button{border:0;background:transparent;padding:4px;color:#fff}
 .notice.error{border-color:#f0d4d1;background:#fff4f3;color:#9d3832}
 .welcome{width:min(980px,calc(100% - 40px));margin:auto;display:flex;flex-direction:column;align-items:center;padding:68px 0 86px;text-align:center}
 .welcome-mark{width:76px;height:76px;display:grid;place-items:center;border:1px solid #e7e7e7;border-radius:22px;color:#343538;background:#fff;box-shadow:0 3px 12px #0000000a;margin-bottom:28px}
