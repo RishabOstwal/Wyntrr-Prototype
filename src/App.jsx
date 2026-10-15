@@ -38,9 +38,9 @@ function ParticipantMedia({ participant, local = false }) {
   }, [audioTrack, local]);
 
   return <div className={local ? 'participant-tile local-tile' : 'participant-tile remote-tile'}>
-    {videoReady && participant.video ? <><video ref={videoRef} className={videoPlaying ? 'video-playing' : 'video-waiting'} onPlaying={() => setVideoPlaying(true)} onWaiting={() => setVideoPlaying(false)} autoPlay playsInline muted={local} />{!videoPlaying && <div className="participant-placeholder"><div className="placeholder-avatar"><LoaderCircle size={24} className="spin" /></div><span>Waiting for video...</span></div>}</> : <div className="participant-placeholder"><div className="placeholder-avatar">{!local && <LoaderCircle size={24} className="spin" />}</div><span>{local ? 'You' : `Waiting for ${participant.user_name || 'PAL'} video...`}</span></div>}
+    {videoReady && participant.video ? <><video ref={videoRef} className={videoPlaying ? 'video-playing' : 'video-waiting'} onPlaying={() => setVideoPlaying(true)} onWaiting={() => setVideoPlaying(false)} autoPlay playsInline muted={local} />{!videoPlaying && <div className="participant-placeholder"><div className="placeholder-avatar"><LoaderCircle size={24} className="spin" /></div><span>Waiting for video...</span></div>}</> : <div className="participant-placeholder"><div className="placeholder-avatar">{!local && <LoaderCircle size={24} className="spin" />}</div><span>{local ? 'You' : `Waiting for ${participant.user_name || 'Wyntrr'} video...`}</span></div>}
     {!local && <audio ref={audioRef} autoPlay />}
-    <span className="participant-name">{participant.user_name || (local ? 'You' : 'PAL')}</span>
+    <span className="participant-name">{participant.user_name || (local ? 'You' : 'Wyntrr')}</span>
   </div>;
 }
 
@@ -326,8 +326,8 @@ function App() {
               <div ref={dailyContainerRef} className="custom-call-stage">
                 {participants.filter((participant) => !participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} />)}
                 {!callConnected && <div className="joining-state"><LoaderCircle size={22} className="spin" /><span>{callError ? 'Having trouble connecting' : 'Connecting...'}</span></div>}
-                {captionsEnabled && caption?.text && <div className="closed-caption" role="status" aria-live="polite"><span>{caption.role === 'user' ? 'You' : 'PAL'}</span><p>{caption.text}</p></div>}
-                {active.mode === 'audio' && callConnected && <div className="audio-presence"><div className="audio-orb"><span /><span /><span /><span /><span /></div><strong>PAL</strong><small>Audio call</small></div>}
+                {captionsEnabled && caption?.text && <div className="closed-caption" role="status" aria-live="polite"><span>{caption.role === 'user' ? 'You' : 'Wyntrr'}</span><p>{caption.text}</p></div>}
+                {active.mode === 'audio' && callConnected && <div className="audio-presence"><div className="audio-orb"><span /><span /><span /><span /><span /></div><strong>Wyntrr</strong><small>Audio call</small></div>}
                 {participants.filter((participant) => participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} local />)}
                 {callConnected && <div className="call-controls">
                   <button aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'} onClick={async () => { const next = !cameraOn; await dailyCallRef.current?.setLocalVideo(next); setCameraOn(next); }}><Camera size={19} />{cameraOn ? 'Camera' : 'Camera off'}</button>
