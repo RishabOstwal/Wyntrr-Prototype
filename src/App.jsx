@@ -285,7 +285,7 @@ function App() {
               {busy ? <LoaderCircle size={17} className="spin" /> : <Video size={17} />}{busy ? 'Connecting...' : 'Start video call'}
             </button>
           </div>
-          {!palConfigured && <div className="privacy-note">Add TAVUS_PAL_ID to the server .env file to enable calls.</div>}
+          {!palConfigured && <div className="privacy-note">Configure TAVUS_PAL_ID in the server environment to enable calls.</div>}
         </section> : <div className="conversation">
           <section className="video-column">
             <div ref={callFrameRef} className="call-frame">

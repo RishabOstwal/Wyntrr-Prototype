@@ -22,3 +22,5 @@ The Express server keeps the API key and PAL ID on the server and proxies conver
 ## Production
 
 Run `npm run build`, then run `npm start` with `TAVUS_API_KEY` and `TAVUS_PAL_ID` set in the server environment.
+
+For Vercel, the API routes in `api/` are deployed alongside the Vite frontend. Add `TAVUS_API_KEY` and `TAVUS_PAL_ID` under the project's **Settings → Environment Variables** for the Production environment, then redeploy.
