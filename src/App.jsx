@@ -141,10 +141,23 @@ function App() {
           return;
         }
       }
-      if (message?.event_type !== 'conversation.utterance.streaming') return;
+      if (!message || typeof message !== 'object') return;
+      const eventType = message.event_type;
+      if (!['conversation.utterance.streaming', 'conversation.utterance'].includes(eventType)) return;
 
-      const { role, text } = message.properties || {};
-      if (disposed || !['user', 'replica'].includes(role) || typeof text !== 'string') return;
+      const properties = message.properties && typeof message.properties === 'object' ? message.properties : {};
+      const text = [
+        properties.text, message.text,
+        properties.speech, message.speech,
+        properties.content, message.content,
+        properties.transcript, message.transcript,
+      ].find((value) => typeof value === 'string' && value.trim());
+      const rawRole = String(properties.role ?? message.role ?? '').toLowerCase();
+      const isReplica = ['replica', 'assistant'].includes(rawRole)
+        || Boolean(properties.inference_id ?? message.inference_id)
+        || eventType === 'conversation.utterance';
+      const role = rawRole === 'user' ? 'user' : isReplica ? 'replica' : 'user';
+      if (disposed || typeof text !== 'string') return;
       setCaption({ role, text });
     };
 
