@@ -109,6 +109,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .call-controls{position:absolute;z-index:5;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #ffffff1f;border-radius:16px;background:#171b22d9;backdrop-filter:blur(16px)}
 .call-controls button{min-width:62px;min-height:54px;flex-direction:column;gap:4px;border:0;background:transparent;color:#fff;font-size:10px}
 .call-controls button:hover{background:#ffffff16}.call-controls .leave-call{border-radius:11px;background:#ed4149;color:#fff}.call-controls .leave-call:hover{background:#d9323a}
+.closed-caption{position:absolute;z-index:4;left:50%;bottom:108px;transform:translateX(-50%);width:min(82%,900px);max-height:28%;overflow:hidden;padding:12px 20px;border:1px solid #ffffff1c;border-radius:12px;background:#05070bd9;color:#fff;text-align:center;box-shadow:0 8px 30px #0007;pointer-events:none}
+.closed-caption span{display:block;margin-bottom:4px;color:#d4d9e2;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.closed-caption p{margin:0;font-size:clamp(16px,2vw,24px);font-weight:600;line-height:1.35;text-wrap:pretty}
+.call-controls .caption-toggle{min-width:76px}.call-controls .caption-toggle>span{padding:1px 3px;border:1px solid #ffffff9c;border-radius:3px;font-size:10px;font-weight:800;letter-spacing:-.04em}.call-controls .caption-toggle.active>span{border-color:#9ecbff;background:#9ecbff;color:#10151c}
 @keyframes wave{to{transform:scaleY(.45);opacity:.65}}
 .chat-shell.in-call .call-toolbar{display:none}
 .chat-shell.in-call .call-error{position:fixed;z-index:35;top:18px;left:50%;transform:translateX(-50%);max-width:min(700px,calc(100vw - 32px));display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #8a343a;border-radius:10px;background:#271619ed;color:#ffdadd;font-size:12px}.chat-shell.in-call .call-error span{flex:1}.chat-shell.in-call .call-error button,.chat-shell.in-call .call-error a{flex:none;border-color:#73353a;background:transparent;color:#fff;padding:6px 9px;font-size:11px}.chat-shell.in-call .call-error button:hover,.chat-shell.in-call .call-error a:hover{background:#ffffff12}
@@ -132,5 +136,5 @@ body{background:#080b10}
 .secondary:hover{background:#202937}
 .privacy-note{color:#a2adbd}
 .chat-shell.in-call .main-panel{background:#080b10}
-@media(max-width:620px){.local-tile{right:12px;bottom:86px;width:32vw;height:20vh;min-height:100px}.call-controls{bottom:16px;gap:4px;padding:6px}.call-controls button{min-width:56px}}
+@media(max-width:620px){.local-tile{right:12px;bottom:86px;width:32vw;height:20vh;min-height:100px}.call-controls{bottom:16px;gap:4px;padding:6px}.call-controls button{min-width:56px}.call-controls .caption-toggle{min-width:68px}.closed-caption{bottom:94px;width:92%;max-height:26%;padding:10px 13px}.closed-caption p{font-size:16px}}
 

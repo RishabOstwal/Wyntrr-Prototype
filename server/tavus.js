@@ -22,6 +22,7 @@ export async function createConversation(req, res) {
   const body = {
     pal_id: selectedPalId,
     audio_only: audio_only === true,
+    properties: { enable_closed_captions: true },
     ...(typeof face_id === 'string' && face_id.trim() ? { face_id: face_id.trim() } : configuredFaceId ? { face_id: configuredFaceId } : {}),
     ...(typeof conversation_name === 'string' && conversation_name.trim() ? { conversation_name: conversation_name.trim() } : {}),
     ...(typeof conversational_context === 'string' && conversational_context.trim() ? { conversational_context: conversational_context.trim() } : {}),

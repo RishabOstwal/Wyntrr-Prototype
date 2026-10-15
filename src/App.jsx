@@ -63,6 +63,8 @@ function App() {
   const [participants, setParticipants] = useState([]);
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const [caption, setCaption] = useState(null);
   const [callError, setCallError] = useState('');
   useEffect(() => {
     fetch('/api/health')
@@ -113,6 +115,7 @@ function App() {
     setParticipants([]);
     setCameraOn(active.mode !== 'audio');
     setMicOn(true);
+    setCaption(null);
     setCallError('');
 
     const onJoinedMeeting = () => {
@@ -127,6 +130,22 @@ function App() {
 
     const syncParticipants = () => {
       if (!disposed && call) setParticipants(Object.values(call.participants() || {}));
+    };
+
+    const onAppMessage = (event) => {
+      let message = event?.data;
+      if (typeof message === 'string') {
+        try {
+          message = JSON.parse(message);
+        } catch {
+          return;
+        }
+      }
+      if (message?.event_type !== 'conversation.utterance.streaming') return;
+
+      const { role, text } = message.properties || {};
+      if (disposed || !['user', 'replica'].includes(role) || typeof text !== 'string') return;
+      setCaption({ role, text });
     };
 
     const onCallJoinError = (event) => {
@@ -158,6 +177,7 @@ function App() {
         call.on('participant-left', syncParticipants);
         call.on('track-started', syncParticipants);
         call.on('track-stopped', syncParticipants);
+        call.on('app-message', onAppMessage);
         call.on('error', onCallJoinError);
         call.on('load-attempt-failed', onCallJoinError);
         joinTimeout = window.setTimeout(() => {
@@ -187,6 +207,7 @@ function App() {
         call.off('participant-left', syncParticipants);
         call.off('track-started', syncParticipants);
         call.off('track-stopped', syncParticipants);
+        call.off('app-message', onAppMessage);
         call.leave().catch(() => {}).finally(() => call.destroy());
       }
       dailyContainerRef.current?.replaceChildren();
@@ -292,11 +313,13 @@ function App() {
               <div ref={dailyContainerRef} className="custom-call-stage">
                 {participants.filter((participant) => !participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} />)}
                 {!callConnected && <div className="joining-state"><LoaderCircle size={22} className="spin" /><span>{callError ? 'Having trouble connecting' : 'Connecting...'}</span></div>}
+                {captionsEnabled && caption?.text && <div className="closed-caption" role="status" aria-live="polite"><span>{caption.role === 'user' ? 'You' : 'PAL'}</span><p>{caption.text}</p></div>}
                 {active.mode === 'audio' && callConnected && <div className="audio-presence"><div className="audio-orb"><span /><span /><span /><span /><span /></div><strong>PAL</strong><small>Audio call</small></div>}
                 {participants.filter((participant) => participant.local).map((participant) => <ParticipantMedia key={participant.session_id} participant={participant} local />)}
                 {callConnected && <div className="call-controls">
                   <button aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'} onClick={async () => { const next = !cameraOn; await dailyCallRef.current?.setLocalVideo(next); setCameraOn(next); }}><Camera size={19} />{cameraOn ? 'Camera' : 'Camera off'}</button>
                   <button aria-label={micOn ? 'Mute microphone' : 'Unmute microphone'} onClick={async () => { const next = !micOn; await dailyCallRef.current?.setLocalAudio(next); setMicOn(next); }}>{micOn ? <Mic size={19} /> : <MicOff size={19} />}{micOn ? 'Mic' : 'Muted'}</button>
+                  <button className={`caption-toggle ${captionsEnabled ? 'active' : ''}`} aria-label={`Turn captions ${captionsEnabled ? 'off' : 'on'}`} aria-pressed={captionsEnabled} onClick={() => { if (captionsEnabled) setCaption(null); setCaptionsEnabled(!captionsEnabled); }}><span aria-hidden="true">CC</span>Captions</button>
                   <button className="leave-call" aria-label="Leave call" onClick={() => endConversation()} disabled={ending}><PhoneOff size={19} />Leave</button>
                 </div>}
               </div>
