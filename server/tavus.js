@@ -8,14 +8,14 @@ export function getHealth(_req, res) {
 export async function createConversation(req, res) {
   const apiKey = process.env.TAVUS_API_KEY?.trim();
   if (!apiKey) {
-    return res.status(503).json({ error: 'Add TAVUS_API_KEY to the server environment to connect Tavus.' });
+    return res.status(503).json({ error: 'Calls are not configured on the server. Contact the site administrator.' });
   }
 
   const { pal_id, face_id, conversation_name, conversational_context, custom_greeting, audio_only } = req.body ?? {};
   const configuredPalId = process.env.TAVUS_PAL_ID?.trim();
   const selectedPalId = typeof pal_id === 'string' && pal_id.trim() ? pal_id.trim() : configuredPalId;
   if (!selectedPalId) {
-    return res.status(503).json({ error: 'Set TAVUS_PAL_ID in the server environment to start calls.' });
+    return res.status(503).json({ error: 'Calls are not configured on the server. Contact the site administrator.' });
   }
 
   const configuredFaceId = process.env.TAVUS_FACE_ID?.trim();
@@ -43,18 +43,18 @@ export async function createConversation(req, res) {
     try {
       payload = responseText ? JSON.parse(responseText) : {};
     } catch {
-      payload = { error: responseText || 'Tavus returned an unreadable response.' };
+      payload = { error: responseText || 'The call service returned an unreadable response.' };
     }
     return res.status(upstream.status).json(payload);
   } catch {
-    return res.status(502).json({ error: 'Could not reach the Tavus API. Check the server network and try again.' });
+    return res.status(502).json({ error: 'Could not reach the call service. Check the server connection and try again.' });
   }
 }
 
 export async function endConversation(req, res) {
   const apiKey = process.env.TAVUS_API_KEY?.trim();
   if (!apiKey) {
-    return res.status(503).json({ error: 'Add TAVUS_API_KEY to the server environment to connect Tavus.' });
+    return res.status(503).json({ error: 'Calls are not configured on the server. Contact the site administrator.' });
   }
 
   const conversationId = req.params?.conversationId ?? req.query?.conversationId;
@@ -73,12 +73,12 @@ export async function endConversation(req, res) {
       try {
         payload = responseText ? JSON.parse(responseText) : {};
       } catch {
-        payload = { error: responseText || 'Tavus could not end this conversation.' };
+        payload = { error: responseText || 'The call service could not end this conversation.' };
       }
       return res.status(upstream.status).json(payload);
     }
     return res.json({ ended: true });
   } catch {
-    return res.status(502).json({ error: 'Could not reach the Tavus API. Check the server network and try again.' });
+    return res.status(502).json({ error: 'Could not reach the call service. Check the server connection and try again.' });
   }
 }

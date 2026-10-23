@@ -4,6 +4,11 @@ import DailyIframe from '@daily-co/daily-js';
 
 const loadDailyClient = () => Promise.resolve(DailyIframe);
 
+function userFacingCallMessage(message, fallback) {
+  if (typeof message !== 'string' || !message.trim()) return fallback;
+  return /tavus/i.test(message) ? fallback : message;
+}
+
 function createMutedSpeechDetector(audioTrack, onSpeechDetected) {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   if (!audioTrack || !AudioContextClass) return null;
@@ -232,7 +237,7 @@ function App() {
     const onCallJoinError = (event) => {
       window.clearTimeout(joinTimeout);
       if (!disposed) {
-        setCallError(event?.errorMsg || event?.error?.message || event?.error?.msg || event?.message || 'The call connection encountered an error.');
+      setCallError(userFacingCallMessage(event?.errorMsg || event?.error?.message || event?.error?.msg || event?.message, 'The call connection encountered an error.'));
       }
     };
 
@@ -269,7 +274,7 @@ function App() {
         await call.join({ url: active.url, startVideoOff: active.mode === 'audio' });
       } catch (joinError) {
         window.clearTimeout(joinTimeout);
-        if (!disposed) setCallError(joinError?.message || 'Could not join the Tavus call.');
+        if (!disposed) setCallError(userFacingCallMessage(joinError?.message, 'Could not join the call.'));
       }
     };
 
@@ -315,9 +320,9 @@ function App() {
         }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || result.message || 'Tavus could not create this conversation.');
+      if (!response.ok) throw new Error(userFacingCallMessage(result.error || result.message, 'Could not start the call.'));
       if (!result.conversation_url || !result.conversation_id) {
-        throw new Error('Tavus created a response without a conversation URL. Check your PAL and Face settings.');
+        throw new Error('The call service response was missing a connection URL. Check your call profile and avatar settings.');
       }
       const session = {
         id: result.conversation_id,
@@ -346,7 +351,7 @@ function App() {
     try {
       const response = await fetch(`/api/conversations/${encodeURIComponent(conversation.id)}/end`, { method: 'POST', keepalive: true });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || result.message || 'Could not end this conversation.');
+      if (!response.ok) throw new Error(userFacingCallMessage(result.error || result.message, 'Could not end this conversation.'));
       if (document.fullscreenElement === callFrameRef.current) {
         await document.exitFullscreen?.().catch(() => {});
       }
@@ -356,7 +361,7 @@ function App() {
       }
       setNotice('Conversation ended.');
     } catch (err) {
-      setError(err.message || 'Could not end this conversation.');
+      setError(userFacingCallMessage(err.message, 'Could not end this conversation.'));
     } finally {
       endingConversationIdsRef.current.delete(conversation.id);
       setEnding(false);
@@ -396,7 +401,7 @@ function App() {
         }, '*');
       }
     } catch (cameraError) {
-      setCallError(cameraError?.message || 'Could not update the camera.');
+      setCallError(userFacingCallMessage(cameraError?.message, 'Could not update the camera.'));
     }
   };
 
@@ -434,7 +439,7 @@ function App() {
       }
     } catch (micError) {
       detector?.stop();
-      setCallError(micError?.message || 'Could not update the microphone.');
+      setCallError(userFacingCallMessage(micError?.message, 'Could not update the microphone.'));
       return;
     }
 
@@ -462,7 +467,7 @@ function App() {
               {busy ? <LoaderCircle size={17} className="spin" /> : <Video size={17} />}{busy ? 'Connecting...' : 'Start video call'}
             </button>
           </div>
-          {!palConfigured && <div className="privacy-note">Configure TAVUS_PAL_ID in the server environment to enable calls.</div>}
+          {!palConfigured && <div className="privacy-note">Configure the call profile in the server environment to enable calls.</div>}
         </section> : <div className="conversation">
           <section className="video-column">
             <div ref={callFrameRef} className="call-frame">
