@@ -461,7 +461,8 @@ function App() {
 
         {!active ? <section className="welcome">
           <div className="welcome-mark"><Video size={24} /></div>
-          <h1>What would you like to talk about?</h1>
+          <h1>Ready to meet Wyntrr? 💙</h1>
+          <p>A friendly chat, a creative idea, or anything on your mind. Wyntrr is here to talk with you.</p>
           <div className="call-start-options">
             <button className="primary start-button" onClick={() => startConversation('video')} disabled={busy || checkingHealth || !tavusReady || !palConfigured}>
               {busy ? <LoaderCircle size={17} className="spin" /> : <Video size={17} />}{busy ? 'Connecting...' : 'Start video call'}
