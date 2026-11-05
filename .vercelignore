@@ -1,0 +1,7 @@
+.env
+.env.*
+.git/
+.vercel/
+certs/
+node_modules/
+dist/
