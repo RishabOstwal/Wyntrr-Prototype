@@ -1,4 +1,5 @@
 import { createLemonSliceSession, isLemonSliceConfigured } from './lemonslice.js';
+import { addParticipantMemory } from './participant-memory.js';
 
 export function getHealth(_req, res) {
   res.json({
@@ -77,7 +78,7 @@ export async function getConversation(req, res) {
 }
 
 export async function createConversation(req, res) {
-  const { pal_id, partner, face_id, conversation_name, conversational_context, custom_greeting, audio_only } = req.body ?? {};
+  const { pal_id, partner, face_id, conversation_name, conversational_context, custom_greeting, audio_only, participant_tag } = req.body ?? {};
   if (partner !== undefined && partner !== 'wyntrr' && partner !== 'lil-spark') {
     return res.status(400).json({ error: 'Invalid chat partner.' });
   }
@@ -95,7 +96,7 @@ export async function createConversation(req, res) {
   }
 
   const configuredFaceId = process.env.TAVUS_FACE_ID?.trim();
-  const body = {
+  let body = {
     pal_id: selectedPalId,
     audio_only: audio_only === true,
     properties: { enable_closed_captions: true },
@@ -104,6 +105,11 @@ export async function createConversation(req, res) {
     ...(typeof conversational_context === 'string' && conversational_context.trim() ? { conversational_context: conversational_context.trim() } : {}),
     ...(typeof custom_greeting === 'string' && custom_greeting.trim() ? { custom_greeting: custom_greeting.trim() } : {}),
   };
+  try {
+    body = addParticipantMemory(body, participant_tag);
+  } catch {
+    return res.status(400).json({ error: 'Invalid participant tag.' });
+  }
 
   try {
     const upstream = await fetch('https://tavusapi.com/v2/conversations', {

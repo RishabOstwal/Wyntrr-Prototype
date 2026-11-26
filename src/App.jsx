@@ -7,7 +7,7 @@ const LOGIN_API_URL = '/api/auth/login';
 const REMEMBERED_LOGIN_KEY = 'wyntrr.rememberedLogin';
 
 function redactApiDebugValue(value, key = '') {
-  if (/(password|token|secret|authorization|api.?key|email)/i.test(key)) return '[REDACTED]';
+  if (/(password|token|secret|authorization|api.?key|email|participant.?tag)/i.test(key)) return '[REDACTED]';
   if (Array.isArray(value)) return value.map((item) => redactApiDebugValue(item));
   if (value && typeof value === 'object') {
     return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [childKey, redactApiDebugValue(childValue, childKey)]));
@@ -629,6 +629,7 @@ function App() {
         body: JSON.stringify({
           partner: selectedPartner,
           audio_only: mode === 'audio',
+          ...(loginSession?.participantTag ? { participant_tag: loginSession.participantTag } : {}),
           conversational_context: [
             `At the start of this call, the user's camera is ${mode === 'audio' ? 'OFF' : 'ON'}.`,
             'The app will send an update whenever the camera state changes; the latest update is authoritative and supersedes earlier states.',
@@ -749,7 +750,13 @@ function App() {
           // Credential storage is optional and must not block a successful sign-in.
         }
       }
-      setLoginSession({ conversationId: payload.conversationId, token: payload.token });
+      setLoginSession({
+        conversationId: payload.conversationId,
+        token: payload.token,
+        participantTag: typeof payload.participantTag === 'string' && payload.participantTag.trim()
+          ? payload.participantTag.trim()
+          : undefined,
+      });
       setLoginComplete(true);
     } catch (signInError) {
       setLoginError(signInError instanceof TypeError ? 'Could not reach the sign-in service. Check the connection and try again.' : (signInError.message || 'Could not sign in. Please try again.'));
