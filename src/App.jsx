@@ -251,7 +251,7 @@ function ParticipantMedia({ participant, local = false, onSwitchCamera, cameraSw
     {videoReady && participant.video ? <><video ref={videoRef} className={videoPlaying ? 'video-playing' : 'video-waiting'} onPlaying={() => setVideoPlaying(true)} onWaiting={() => setVideoPlaying(false)} autoPlay playsInline muted={local} />{!videoPlaying && <div className="participant-placeholder"><div className="placeholder-avatar"><LoaderCircle size={24} className="spin" /></div><span>Waiting for video...</span></div>}</> : <div className="participant-placeholder"><div className="placeholder-avatar">{!local && <LoaderCircle size={24} className="spin" />}</div><span>{local ? 'You' : `Waiting for ${displayName} video...`}</span></div>}
     {local && cameraOn && <button className="switch-camera" type="button" aria-label="Switch camera" title="Switch camera" disabled={cameraSwitching} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onSwitchCamera(); }}><SwitchCamera size={18} /></button>}
     {!local && <audio ref={audioRef} autoPlay />}
-    <span className="participant-name">{local ? (participant.user_name || 'You') : displayName}</span>
+    {local && <span className="participant-name">{participant.user_name || 'You'}</span>}
   </div>;
 }
 
