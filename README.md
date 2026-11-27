@@ -11,6 +11,8 @@ A minimal video calling frontend integrated with Tavus. Start a video call from 
    ```env
    TAVUS_API_KEY=your_tavus_api_key
    TAVUS_PAL_ID=your_tavus_pal_id
+   # Optional but recommended for persistent Tavus memory.
+   TAVUS_MEMORY_TAG_SECRET=use_a_long_stable_random_secret
    # Optional: enable Lil Spark (powered by LemonSlice).
    LEMONSLICE_API_KEY=your_lemonslice_api_key
    LEMONSLICE_AGENT_ID=your_lemonslice_agent_id
@@ -23,6 +25,14 @@ A minimal video calling frontend integrated with Tavus. Start a video call from 
 5. Start the app with `npm run dev`, then open the Vite URL printed in the terminal.
 
 The Express server keeps the API key and PAL ID on the server and proxies conversation creation and ending to Tavus. The browser loads Daily's call SDK to connect media, but the call UI is rendered by this app.
+
+## Participant memory
+
+After a successful sign-in, the server derives an opaque Tavus participant tag from the authenticated identity. Raw email addresses are not sent to Tavus. The browser returns only that generated tag when starting a call, and the server forwards it as `participant_tags`.
+
+The identity and tag are stable for the same signed-in user, so Tavus can reuse that user's memory with the same PAL. Memories remain separate between PALs and are not shared between different people. If sign-in does not provide an identifier and email fallback is unavailable, or if no memory secret/API key is configured, the call continues normally without persistent memory.
+
+Set `TAVUS_MEMORY_TAG_SECRET` to a long, random, server-only value and keep it stable across deployments. If it is omitted, the app uses `TAVUS_API_KEY` as the HMAC key. Rotating whichever secret is active changes the derived participant tags and starts new Tavus memory stores.
 
 The partner picker includes Wyntrr (Tavus) and Lil Spark (LemonSlice). Lil Spark sessions are created on the server through LemonSlice's hosted session API, which returns a Daily room URL and token that the same custom call view joins. Set `LEMONSLICE_API_KEY` and `LEMONSLICE_AGENT_ID` to enable it. Captions and camera-state updates are Tavus-specific and do not apply to Lil Spark calls.
 
@@ -50,4 +60,4 @@ For the browser on the other computer to trust the certificate, install the mkce
 
 Run `npm run build`, then run `npm start` with `TAVUS_API_KEY` and `TAVUS_PAL_ID` set in the server environment.
 
-For Vercel, the API routes in `api/` are deployed alongside the Vite frontend. Add `TAVUS_API_KEY` and `TAVUS_PAL_ID` under the project's **Settings → Environment Variables** for the Production environment, then redeploy.
+For Vercel, the API routes in `api/` are deployed alongside the Vite frontend. Add `TAVUS_API_KEY`, `TAVUS_PAL_ID`, and a stable `TAVUS_MEMORY_TAG_SECRET` under the project's **Settings → Environment Variables** for the Production environment, then redeploy.

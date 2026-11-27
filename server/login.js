@@ -1,3 +1,8 @@
+import {
+  createParticipantTag,
+  getParticipantMemorySecret,
+} from './participant-memory.js';
+
 const DEFAULT_LOGIN_API_URL = 'http://192.168.11.160:3001/video-login';
 
 export async function login(req, res) {
@@ -28,7 +33,20 @@ export async function login(req, res) {
         error: payload?.message || payload?.error || (response.status === 401 || response.status === 403 ? 'Email or password is incorrect.' : 'Could not sign in. Please try again.'),
       });
     }
-    return res.status(response.status).json(payload);
+
+    const participantTag = createParticipantTag({
+      loginPayload: payload,
+      email,
+      secret: getParticipantMemorySecret(),
+    });
+    const responsePayload = payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? {
+          ...payload,
+          ...(participantTag ? { participantTag } : {}),
+        }
+      : payload;
+
+    return res.status(response.status).json(responsePayload);
   } catch (error) {
     const timedOut = error?.name === 'TimeoutError' || error?.name === 'AbortError';
     return res.status(timedOut ? 504 : 502).json({
